@@ -1,1 +1,95 @@
-<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>Google Sheets Data Fetcher</title>\n    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>\n</head>\n<body>\n    <h1>Google Sheets Data Fetcher</h1>\n    <input type="text" id="searchInput" placeholder="Search by Group...">\n    <table id="dataTable" border="1">\n        <thead>\n            <tr>\n                <th>Group</th>\n                <th>Name</th>\n                <th>Value</th>\n            </tr>\n        </thead>\n        <tbody id="dataBody">\n        </tbody>\n    </table>\n    <script>\n        const SHEET_ID = 'YOUR_SHEET_ID'; // Replace with your Google Sheet ID\n        const API_KEY = 'YOUR_API_KEY'; // Replace with your Google API Key\n        const range = 'A1:C100'; // Adjust the range according to your data\n        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}?key=${API_KEY}`;\n\n        async function fetchData() {\n            try {\n                const response = await axios.get(url);\n                displayData(response.data.values);\n            } catch (error) {\n                console.error('Error fetching data:', error);\n            }\n        }\n\n        function displayData(data) {\n            const dataBody = document.getElementById('dataBody');\n            dataBody.innerHTML = ''; // Clear existing data\n            data.forEach((row, index) => { // Assume the first row is headers\n                if (index === 0) return; // Skip header row\n                const tr = document.createElement('tr');\n                row.forEach(cell => {\n                    const td = document.createElement('td');\n                    td.textContent = cell;\n                    tr.appendChild(td);\n                });\n                dataBody.appendChild(tr);\n            });\n        }\n\n        document.getElementById('searchInput').addEventListener('input', function() {\n            const filter = this.value.toLowerCase();\n            const rows = document.querySelectorAll('#dataBody tr');\n            rows.forEach(row => {\n                const groupCell = row.cells[0].textContent.toLowerCase();\n                row.style.display = groupCell.includes(filter) ? '' : 'none';\n            });\n        });\n\n        fetchData();\n    </script>\n</body>\n</html>\n
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sheets Data</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; border: 1px solid #ddd; }
+        th { background-color: #f2f2f2; }
+        .filter-container { margin-bottom: 20px; }
+        .filter, .search { margin-right: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Google Sheets Data</h1>
+    <div class="filter-container">
+        <input type="text" id="searchInput" class="search" placeholder="Search...">
+        <select id="groupFilter" class="filter">
+            <option value="">All Groups</option>
+            <!-- Options will be populated dynamically -->
+        </select>
+        <button id="filterButton">Filter</button>
+    </div>
+    <table id="dataTable">
+        <thead>
+            <tr>
+                <th>Group</th>
+                <th>Name</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+    <div id="resultCount"></div>
+
+    <script>
+        const dataUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQEJd-P9_gH7MCHuKgKMNbJYFvIim7iMZegUJ0QXRByQc8bKqIPJHENpY7ukuYZxz7VAOku1esfGNGP/pub?output=csv&gid=1760985047';
+        let data = [];
+
+        // Fetch the data from Google Sheets
+        fetch(dataUrl)
+            .then(response => response.text())
+            .then(csvData => {
+                const rows = csvData.split('\n').map(row => row.split(','));
+                data = rows.slice(1);
+                populateTable(data);
+                populateFilterOptions(data);
+            });
+
+        function populateTable(data) {
+            const tableBody = document.querySelector('#dataTable tbody');
+            tableBody.innerHTML = '';
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                row.forEach(cell => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    tr.appendChild(td);
+                });
+                tableBody.appendChild(tr);
+            });
+            updateResultCount(data.length);
+        }
+
+        function populateFilterOptions(data) {
+            const groupSet = new Set(data.map(row => row[0])); // Assuming Group is in first column
+            const groupFilter = document.getElementById('groupFilter');
+            groupSet.forEach(group => {
+                const option = document.createElement('option');
+                option.value = group;
+                option.textContent = group;
+                groupFilter.appendChild(option);
+            });
+        }
+
+        function updateResultCount(count) {
+            document.getElementById('resultCount').textContent = `Total Results: ${count}`;
+        }
+
+        document.getElementById('filterButton').onclick = () => {
+            const searchValue = document.getElementById('searchInput').value.toLowerCase();
+            const groupValue = document.getElementById('groupFilter').value;
+            const filteredData = data.filter(row => {
+                const matchesGroup = groupValue === '' || row[0] === groupValue;
+                const matchesSearch = row.some(cell => cell.toLowerCase().includes(searchValue));
+                return matchesGroup && matchesSearch;
+            });
+            populateTable(filteredData);
+        };
+    </script>
+</body>
+</html>
