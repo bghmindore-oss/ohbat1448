@@ -3,93 +3,362 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Sheets Data</title>
+    <title>Data Search - Group Filter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 10px; border: 1px solid #ddd; }
-        th { background-color: #f2f2f2; }
-        .filter-container { margin-bottom: 20px; }
-        .filter, .search { margin-right: 10px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #999;
+            margin-bottom: 30px;
+            font-size: 1em;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+            align-items: end;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #555;
+            font-size: 0.95em;
+        }
+        
+        input[type="text"],
+        select {
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .search-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .search-btn:active {
+            transform: translateY(0);
+        }
+        
+        .clear-btn {
+            background: #f0f0f0;
+            color: #333;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .clear-btn:hover {
+            background: #e8e8e8;
+            border-color: #d0d0d0;
+        }
+        
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .result-count {
+            font-size: 0.95em;
+            color: #666;
+            font-weight: 600;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        thead {
+            background: linear-gradient(135deg, #f8f9fa 0%, #f0f0f0 100%);
+        }
+        
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 700;
+            color: #333;
+            border-bottom: 2px solid #e0e0e0;
+            white-space: nowrap;
+        }
+        
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            color: #555;
+        }
+        
+        tbody tr {
+            transition: all 0.2s ease;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9ff;
+        }
+        
+        tbody tr:nth-child(even) {
+            background: #fafbfc;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+            font-size: 1.1em;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                grid-column: 1 / -1;
+            }
+            
+            th, td {
+                padding: 10px;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>Google Sheets Data</h1>
-    <div class="filter-container">
-        <input type="text" id="searchInput" class="search" placeholder="Search...">
-        <select id="groupFilter" class="filter">
-            <option value="">All Groups</option>
-            <!-- Options will be populated dynamically -->
-        </select>
-        <button id="filterButton">Filter</button>
+    <div class="container">
+        <h1>📊 Data Search</h1>
+        <p class="subtitle">Filter and search your data by group</p>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="groupSelect">Filter by Group:</label>
+                <select id="groupSelect">
+                    <option value="">-- All Groups --</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="searchInput">Search Text:</label>
+                <input type="text" id="searchInput" placeholder="Search across all columns...">
+            </div>
+            <div class="button-group">
+                <button class="search-btn" onclick="applyFilters()">🔍 Search</button>
+                <button class="clear-btn" onclick="clearFilters()">🔄 Clear</button>
+            </div>
+        </div>
+        
+        <div class="results-header">
+            <div class="result-count">
+                <span id="resultCount">Results: Loading...</span>
+            </div>
+        </div>
+        
+        <div class="table-wrapper">
+            <div id="tableContainer">
+                <div class="loading">Loading data...</div>
+            </div>
+        </div>
     </div>
-    <table id="dataTable">
-        <thead>
-            <tr>
-                <th>Group</th>
-                <th>Name</th>
-                <th>Value</th>
-            </tr>
-        </thead>
-        <tbody>
-        </tbody>
-    </table>
-    <div id="resultCount"></div>
 
     <script>
-        const dataUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQEJd-P9_gH7MCHuKgKMNbJYFvIim7iMZegUJ0QXRByQc8bKqIPJHENpY7ukuYZxz7VAOku1esfGNGP/pub?output=csv&gid=1760985047';
-        let data = [];
-
-        // Fetch the data from Google Sheets
-        fetch(dataUrl)
-            .then(response => response.text())
-            .then(csvData => {
-                const rows = csvData.split('\n').map(row => row.split(','));
-                data = rows.slice(1);
-                populateTable(data);
-                populateFilterOptions(data);
-            });
-
-        function populateTable(data) {
-            const tableBody = document.querySelector('#dataTable tbody');
-            tableBody.innerHTML = '';
-            data.forEach(row => {
-                const tr = document.createElement('tr');
-                row.forEach(cell => {
-                    const td = document.createElement('td');
-                    td.textContent = cell;
-                    tr.appendChild(td);
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQEJd-P9_gH7MCHuKgKMNbJYFvIim7iMZegUJ0QXRByQc8bKqIPJHENpY7ukuYZxz7VAOku1esfGNGP/pub?output=csv&gid=1760985047';
+        
+        let allData = [];
+        let filteredData = [];
+        let headers = [];
+        
+        async function loadData() {
+            try {
+                const response = await fetch(SHEET_URL);
+                const csvText = await response.text();
+                
+                // Parse CSV using Papa Parse
+                Papa.parse(csvText, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        allData = results.data.filter(row => Object.values(row).some(v => v)); // Remove empty rows
+                        headers = results.meta.fields;
+                        filteredData = [...allData];
+                        
+                        populateGroupFilter();
+                        displayTable(allData);
+                    },
+                    error: function(error) {
+                        console.error('Parse error:', error);
+                        document.getElementById('tableContainer').innerHTML = '<div class="no-results">Error loading data</div>';
+                    }
                 });
-                tableBody.appendChild(tr);
-            });
-            updateResultCount(data.length);
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('tableContainer').innerHTML = '<div class="no-results">Error loading data</div>';
+            }
         }
-
-        function populateFilterOptions(data) {
-            const groupSet = new Set(data.map(row => row[0])); // Assuming Group is in first column
-            const groupFilter = document.getElementById('groupFilter');
-            groupSet.forEach(group => {
+        
+        function populateGroupFilter() {
+            const groupSet = new Set();
+            allData.forEach(row => {
+                const groupValue = row['Group'] || row['group'];
+                if (groupValue && groupValue.trim()) {
+                    groupSet.add(groupValue.trim());
+                }
+            });
+            
+            const select = document.getElementById('groupSelect');
+            const groups = Array.from(groupSet).sort();
+            
+            groups.forEach(group => {
                 const option = document.createElement('option');
                 option.value = group;
                 option.textContent = group;
-                groupFilter.appendChild(option);
+                select.appendChild(option);
             });
         }
-
-        function updateResultCount(count) {
-            document.getElementById('resultCount').textContent = `Total Results: ${count}`;
-        }
-
-        document.getElementById('filterButton').onclick = () => {
-            const searchValue = document.getElementById('searchInput').value.toLowerCase();
-            const groupValue = document.getElementById('groupFilter').value;
-            const filteredData = data.filter(row => {
-                const matchesGroup = groupValue === '' || row[0] === groupValue;
-                const matchesSearch = row.some(cell => cell.toLowerCase().includes(searchValue));
+        
+        function applyFilters() {
+            const groupFilter = document.getElementById('groupSelect').value.trim();
+            const searchText = document.getElementById('searchInput').value.toLowerCase().trim();
+            
+            filteredData = allData.filter(row => {
+                const matchesGroup = !groupFilter || (row['Group'] || row['group'] || '').trim() === groupFilter;
+                
+                const matchesSearch = !searchText || Object.values(row).some(val => 
+                    val && val.toString().toLowerCase().includes(searchText)
+                );
+                
                 return matchesGroup && matchesSearch;
             });
-            populateTable(filteredData);
-        };
+            
+            displayTable(filteredData);
+        }
+        
+        function clearFilters() {
+            document.getElementById('groupSelect').value = '';
+            document.getElementById('searchInput').value = '';
+            filteredData = [...allData];
+            displayTable(allData);
+        }
+        
+        function displayTable(data) {
+            const container = document.getElementById('tableContainer');
+            document.getElementById('resultCount').textContent = `Results: ${data.length}`;
+            
+            if (data.length === 0) {
+                container.innerHTML = '<div class="no-results">No data found. Try adjusting your filters.</div>';
+                return;
+            }
+            
+            let html = '<table><thead><tr>';
+            headers.forEach(header => {
+                html += `<th>${header}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            data.forEach(row => {
+                html += '<tr>';
+                headers.forEach(header => {
+                    const cellValue = row[header] || '';
+                    html += `<td>${cellValue}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+        
+        // Load data on page load
+        loadData();
     </script>
 </body>
 </html>
